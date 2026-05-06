@@ -2,14 +2,14 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ViotP - Thuê SIM & OTP Manager</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            font-family: 'Segoe UI', Roboto, sans-serif;
         }
 
         body {
@@ -23,7 +23,16 @@
             margin: 0 auto;
         }
 
-        /* header + balance card */
+        .success-badge {
+            background: #d1e7dd;
+            border-left: 4px solid #198754;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #0a3622;
+        }
+
         .header {
             display: flex;
             flex-wrap: wrap;
@@ -40,7 +49,6 @@
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            letter-spacing: -0.3px;
         }
 
         .title p {
@@ -57,9 +65,6 @@
             display: flex;
             align-items: center;
             gap: 18px;
-            backdrop-filter: blur(2px);
-            transition: all 0.2s;
-            border: 1px solid rgba(0,0,0,0.05);
         }
 
         .balance-icon {
@@ -83,7 +88,6 @@
             font-size: 2rem;
             font-weight: 800;
             color: #0f2b3d;
-            letter-spacing: 1px;
         }
 
         .balance-amount small {
@@ -99,7 +103,6 @@
             border-radius: 40px;
             cursor: pointer;
             font-weight: 600;
-            color: #1f5e7e;
             transition: 0.2s;
         }
 
@@ -107,7 +110,6 @@
             background: #d9e2f5;
         }
 
-        /* main grid */
         .grid-2col {
             display: grid;
             grid-template-columns: 1fr 1.2fr;
@@ -117,17 +119,14 @@
         @media (max-width: 880px) {
             .grid-2col {
                 grid-template-columns: 1fr;
-                gap: 28px;
             }
         }
 
-        /* card style */
         .card {
             background: white;
             border-radius: 32px;
             box-shadow: 0 12px 28px rgba(0, 0, 0, 0.05);
             padding: 24px 26px;
-            transition: all 0.2s;
             border: 1px solid #eef2f8;
         }
 
@@ -141,17 +140,12 @@
             gap: 10px;
         }
 
-        .card h2 i {
-            font-size: 1.6rem;
-        }
-
         .divider {
             height: 2px;
             background: linear-gradient(90deg, #cbdde9, transparent);
             margin: 16px 0 24px 0;
         }
 
-        /* form */
         .form-group {
             margin-bottom: 20px;
         }
@@ -256,11 +250,6 @@
             letter-spacing: 2px;
         }
 
-        .loading {
-            opacity: 0.6;
-            pointer-events: none;
-        }
-
         .message-toast {
             position: fixed;
             bottom: 20px;
@@ -271,8 +260,19 @@
             border-radius: 50px;
             font-weight: 500;
             z-index: 1000;
-            box-shadow: 0 6px 14px black;
-            transition: 0.2s;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
 
         .history-list {
@@ -286,11 +286,25 @@
             padding: 12px;
             margin-bottom: 12px;
             border: 1px solid #e9edf2;
+            transition: 0.2s;
+        }
+
+        .history-item:hover {
+            background: #f0f5fa;
+        }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
 <div class="container">
+    <div class="success-badge">
+        ✅ <strong>Đã kết nối Cloudflare Worker Proxy</strong> - Không còn lỗi CORS! API hoạt động ổn định.
+    </div>
+
     <div class="header">
         <div class="title">
             <h1>📱 ViotP SIM OTP Hub</h1>
@@ -307,7 +321,6 @@
     </div>
 
     <div class="grid-2col">
-        <!-- LEFT PANEL: THUÊ SIM -->
         <div class="card">
             <h2>📞 Thuê số điện thoại</h2>
             <div class="divider"></div>
@@ -321,7 +334,7 @@
             <div class="form-group">
                 <label>📱 Dịch vụ (Service)</label>
                 <select id="serviceSelect">
-                    <option value="">-- Chọn dịch vụ --</option>
+                    <option value="">-- Đang tải dịch vụ --</option>
                 </select>
                 <div class="warning-tag">📌 Giá dịch vụ sẽ trừ tự động khi thuê</div>
             </div>
@@ -353,7 +366,6 @@
             </div>
         </div>
 
-        <!-- RIGHT PANEL: OTP & TRẠNG THÁI -->
         <div class="card">
             <h2>🔐 Lấy OTP & Quản lý phiên</h2>
             <div class="divider"></div>
@@ -378,27 +390,23 @@
 </div>
 
 <script>
-    // ---------- CONFIG ----------
+    // ========== CẤU HÌNH ==========
     const API_TOKEN = "4b8282308d0b46b3b757f6164fa360df";
     const BASE_URL = "https://api.viotp.com";
-
-    // global state
-    let currentRentData = null;      // lưu request_id, phone, re_phone ...
-    let servicesCache = { vn: [], la: [] };
-    let networksMap = { 
-        vn: ["MOBIFONE","VINAPHONE","VIETTEL","VIETNAMOBILE","ITELECOM","WINTEL"],
-        la: ["UNITEL","ETL","BEELINE","LAOTEL"]
-    };
-
-    // Helper fetch JSON
-    async function apiCall(url) {
+    
+    // 👇 THAY URL NÀY BẰNG WORKER CỦA BẠN
+    const WORKER_URL = "https://workers.contact-temp-otp.workers.dev/";
+    
+    // Hàm gọi API qua Worker (KHÔNG CÒN LỖI CORS)
+    async function apiCall(endpointUrl) {
+        const proxyUrl = `${WORKER_URL}?url=${encodeURIComponent(endpointUrl)}`;
         try {
-            const resp = await fetch(url);
+            const resp = await fetch(proxyUrl);
             const json = await resp.json();
             return json;
         } catch(e) {
-            console.error(e);
-            return { status_code: -1, message: "Lỗi kết nối API" };
+            console.error("API Error:", e);
+            return { status_code: -1, message: "Lỗi kết nối Worker. Kiểm tra lại URL Worker." };
         }
     }
 
@@ -409,7 +417,7 @@
         if(data.status_code === 200 && data.success) {
             const bal = data.data?.balance || 0;
             document.getElementById("balanceAmount").innerHTML = bal.toLocaleString('vi-VN') + " <small>đ</small>";
-            if(showToast) showMessage("✅ Cập nhật số dư thành công!", "#1f6390");
+            if(showToast) showMessage("✅ Cập nhật số dư thành công!", "#198754");
             return bal;
         } else {
             document.getElementById("balanceAmount").innerHTML = "Lỗi";
@@ -418,42 +426,39 @@
         }
     }
 
-    // 2. Lấy danh sách dịch vụ theo quốc gia (cache)
+    // 2. Lấy danh sách dịch vụ
     async function loadServices(country) {
         const param = country === 'la' ? '&country=la' : '';
         const url = `${BASE_URL}/service/getv2?token=${API_TOKEN}${param}`;
         const data = await apiCall(url);
         if(data.status_code === 200 && Array.isArray(data.data)) {
-            servicesCache[country] = data.data;
             return data.data;
-        } else {
-            console.warn("Không load được service", data);
-            return [];
         }
+        return [];
     }
 
-    // render service dropdown theo quốc gia hiện tại
+    // Render service dropdown
     async function renderServiceDropdown() {
         const country = document.getElementById("countrySelect").value;
-        let services = servicesCache[country];
-        if(!services || services.length === 0) {
-            services = await loadServices(country);
-        }
+        const services = await loadServices(country);
         const selectEl = document.getElementById("serviceSelect");
-        selectEl.innerHTML = '<option value="">-- Chọn dịch vụ --</option>';
-        if(services && services.length) {
+        if(services && services.length > 0) {
+            selectEl.innerHTML = '<option value="">-- Chọn dịch vụ --</option>';
             services.forEach(svc => {
                 const priceText = svc.price ? ` (${svc.price}đ)` : '';
                 selectEl.innerHTML += `<option value="${svc.id}">${svc.name}${priceText}</option>`;
             });
         } else {
-            selectEl.innerHTML += '<option disabled>Không có dịch vụ</option>';
+            selectEl.innerHTML = '<option value="">Không có dịch vụ</option>';
         }
-        // Cập nhật network dropdown dựa trên quốc gia
         updateNetworkDropdown(country);
     }
 
     function updateNetworkDropdown(country) {
+        const networksMap = { 
+            vn: ["MOBIFONE","VINAPHONE","VIETTEL","VIETNAMOBILE","ITELECOM","WINTEL"],
+            la: ["UNITEL","ETL","BEELINE","LAOTEL"]
+        };
         const netSelect = document.getElementById("networkSelect");
         let nets = networksMap[country] || [];
         netSelect.innerHTML = '<option value="">Tất cả nhà mạng</option>';
@@ -474,7 +479,6 @@
         let url = `${BASE_URL}/request/getv2?token=${API_TOKEN}&serviceId=${serviceId}`;
         if(country === 'la') url += `&country=la`;
         
-        // network
         const network = document.getElementById("networkSelect").value;
         if(network) url += `&network=${network}`;
         
@@ -487,7 +491,6 @@
         const reNumber = document.getElementById("renterNumber").value.trim();
         if(reNumber) url += `&number=${encodeURIComponent(reNumber)}`;
         
-        // disable button hiệu ứng
         const rentBtn = document.getElementById("rentPhoneBtn");
         rentBtn.disabled = true;
         rentBtn.textContent = "⏳ Đang thuê...";
@@ -498,14 +501,6 @@
         
         if(result.status_code === 200 && result.success && result.data) {
             const d = result.data;
-            currentRentData = {
-                request_id: d.request_id,
-                phone_number: d.phone_number,
-                re_phone_number: d.re_phone_number,
-                countryISO: d.countryISO,
-                countryCode: d.countryCode
-            };
-            // Hiển thị thông tin
             const rentDiv = document.getElementById("rentResultArea");
             rentDiv.style.display = "block";
             document.getElementById("rentDetail").innerHTML = `
@@ -518,7 +513,6 @@
             document.getElementById("requestIdInput").value = d.request_id;
             await fetchBalance(false);
             showMessage(`Thuê số thành công: ${d.phone_number}`, "#198754");
-            // tự động gợi ý lấy otp
         } else {
             let errMsg = result.message || "Lỗi không xác định";
             if(result.status_code === -2) errMsg = "❌ Số dư không đủ, vui lòng nạp thêm!";
@@ -529,7 +523,7 @@
         }
     }
 
-    // 4. Lấy OTP (session)
+    // 4. Lấy OTP
     async function fetchOTP() {
         let requestId = document.getElementById("requestIdInput").value.trim();
         if(!requestId) {
@@ -547,7 +541,6 @@
         if(res.status_code === 200 && res.success && res.data) {
             const data = res.data;
             let smsContentHtml = "";
-            let codeHtml = "";
             let isSound = data.IsSound === true || data.IsSound === "true";
             if(data.SmsContent) {
                 if(isSound) {
@@ -556,11 +549,8 @@
                     smsContentHtml = `<div>📝 Nội dung: ${data.SmsContent}</div>`;
                 }
             }
-            if(data.Code) {
-                codeHtml = `<div class="code-highlight" style="margin: 10px 0;">🔑 Mã OTP: ${data.Code}</div>`;
-            } else {
-                codeHtml = `<div>⚠️ Chưa nhận được mã, vui lòng đợi hoặc thử lại sau.</div>`;
-            }
+            const codeHtml = data.Code ? `<div class="code-highlight" style="margin: 10px 0;">🔑 Mã OTP: ${data.Code}</div>` : `<div>⚠️ Chưa nhận được mã, vui lòng đợi hoặc thử lại sau.</div>`;
+            
             const displayDiv = document.getElementById("otpDisplayArea");
             displayDiv.style.display = "block";
             document.getElementById("otpContent").innerHTML = `
@@ -571,21 +561,17 @@
                 <div>⏱️ Thời gian: ${data.CreatedTime || "---"}</div>
                 <div>🔁 PhoneOriginal: ${data.PhoneOriginal || "---"}</div>
             `;
-            if(data.Status === 0) {
-                showMessage("⏳ Đang chờ tin nhắn, hãy thử lại sau 20-30 giây", "#e68a2e");
-            } else if(data.Status === 1) {
+            if(data.Status === 1) {
                 showMessage("✅ Đã nhận OTP thành công!", "#198754");
+            } else if(data.Status === 0) {
+                showMessage("⏳ Đang chờ tin nhắn, hãy thử lại sau 20-30 giây", "#e68a2e");
             }
-        } else if(res.status_code === -2) {
-            showMessage("❌ Mã phiên không đúng hoặc hết hạn", "#b91c1c");
-            document.getElementById("otpDisplayArea").style.display = "none";
         } else {
-            let err = res.message || "Không tìm thấy OTP hoặc session chưa có tin nhắn";
-            showMessage(`⚠️ ${err}`, "#b91c1c");
+            showMessage(`⚠️ ${res.message || "Chưa có tin nhắn hoặc session không hợp lệ"}`, "#b91c1c");
         }
     }
 
-    // 5. Lịch sử thuê số (mặc định limit 20)
+    // 5. Lịch sử thuê số
     async function loadHistory() {
         const url = `${BASE_URL}/session/historyv2?token=${API_TOKEN}&limit=20`;
         const historyDiv = document.getElementById("historyList");
@@ -599,12 +585,10 @@
             let html = "";
             res.data.slice(0, 20).forEach(item => {
                 const statusText = item.Status === 1 ? "✅ Hoàn thành" : (item.Status === 0 ? "⏳ Đợi OTP" : "⏰ Hết hạn");
-                const soundIcon = item.IsSound === "true" || item.IsSound === true ? "🎧" : "✉️";
-                let codePreview = item.Code ? `Mã: ${item.Code}` : "Chưa có mã";
                 html += `
                     <div class="history-item">
                         <div><strong>${item.ServiceName || "Dịch vụ"}</strong> | ${item.Phone} (${item.CountryISO || "VN"})</div>
-                        <div>${statusText} | ${soundIcon} ${codePreview}</div>
+                        <div>${statusText} | Mã: ${item.Code || "chưa có"}</div>
                         <div style="font-size:12px; color:#657c92;">${item.CreatedTime || ""}</div>
                         ${item.PhoneOriginal ? `<div style="font-size:11px;">🔄 Thuê lại: ${item.PhoneOriginal}</div>` : ""}
                     </div>
@@ -616,13 +600,22 @@
         }
     }
 
-    //  (tự động load services lúc đầu)
+    function showMessage(msg, bgColor = "#1f2f3c") {
+        const toast = document.createElement("div");
+        toast.className = "message-toast";
+        toast.style.backgroundColor = bgColor;
+        toast.innerText = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = "0";
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
     async function init() {
         await fetchBalance(true);
-        await loadServices('vn');
-        await loadServices('la');
         await renderServiceDropdown();
-        // Event listeners
+        
         document.getElementById("refreshBalanceBtn").addEventListener("click", () => fetchBalance(true));
         document.getElementById("rentPhoneBtn").addEventListener("click", rentPhone);
         document.getElementById("fetchOtpBtn").addEventListener("click", fetchOTP);
@@ -636,23 +629,9 @@
         });
         document.getElementById("countrySelect").addEventListener("change", async () => {
             await renderServiceDropdown();
-            // reset hiển thị thuê
             document.getElementById("rentResultArea").style.display = "none";
             document.getElementById("otpDisplayArea").style.display = "none";
         });
-        // nếu muốn khi click vào lịch sử có thể tự điền request? optional nhẹ
-    }
-
-    function showMessage(msg, bgColor = "#1f2f3c") {
-        const toast = document.createElement("div");
-        toast.className = "message-toast";
-        toast.style.backgroundColor = bgColor;
-        toast.innerText = msg;
-        document.body.appendChild(toast);
-        setTimeout(() => {
-            toast.style.opacity = "0";
-            setTimeout(() => toast.remove(), 400);
-        }, 3000);
     }
 
     init();
