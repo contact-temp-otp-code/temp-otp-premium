@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng nhập - ViOTP</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="auth-page">
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <a href="index.html" class="auth-logo">
+          <i class="fas fa-mobile-alt"></i>
+          <span>ViOTP</span>
+        </a>
+        <h2>Đăng nhập</h2>
+        <p>Chào mừng bạn trở lại! 👋</p>
+      </div>
+      <form id="loginForm">
+        <div class="form-group">
+          <label><i class="fas fa-envelope"></i> Email</label>
+          <input type="email" id="email" placeholder="example@gmail.com" required>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-lock"></i> Mật khẩu</label>
+          <input type="password" id="password" placeholder="••••••••" required>
+        </div>
+        <div class="form-options">
+          <label class="checkbox">
+            <input type="checkbox"> Ghi nhớ đăng nhập
+          </label>
+          <a href="#">Quên mật khẩu?</a>
+        </div>
+        <button type="submit" class="btn-auth">Đăng nhập</button>
+        <div id="message" class="alert" style="display: none;"></div>
+      </form>
+      <div class="auth-footer">
+        <p>Chưa có tài khoản? <a href="register.html">Đăng ký ngay</a></p>
+      </div>
+    </div>
+  </div>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
