@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - ViOTP</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root { --primary: #2563eb; --primary-dark: #1d4ed8; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --dark: #1f2937; --gray: #6b7280; --light: #f3f4f6; --white: #ffffff; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+    .admin-container { display: flex; min-height: 100vh; }
+    .sidebar { width: 280px; background: linear-gradient(180deg, #1f2937 0%, #111827 100%); color: white; position: fixed; height: 100vh; overflow-y: auto; }
+    .sidebar-header { padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 0.75rem; }
+    .sidebar-header i { font-size: 1.5rem; color: var(--primary); }
+    .sidebar-header h2 { font-size: 1.25rem; }
+    .sidebar-nav { padding: 1.5rem 0; }
+    .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.5rem; color: rgba(255,255,255,0.7); text-decoration: none; cursor: pointer; }
+    .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+    .nav-item i { width: 24px; }
+    .main-content { flex: 1; margin-left: 280px; padding: 1.5rem; }
+    .admin-header { background: white; border-radius: 16px; padding: 1rem 1.5rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+    .admin-title h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+    .admin-title p { color: var(--gray); font-size: 0.875rem; }
+    .logout-btn { background: var(--danger); color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem; }
+    .stat-card { background: white; border-radius: 16px; padding: 1.25rem; display: flex; align-items: center; gap: 1rem; }
+    .stat-icon { width: 50px; height: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+    .stat-icon i { font-size: 1.5rem; color: white; }
+    .stat-info h3 { font-size: 1.875rem; font-weight: 700; }
+    .stat-info p { color: var(--gray); font-size: 0.875rem; }
+    .card { background: white; border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; }
+    .card-header h3 { font-size: 1.125rem; }
+    .table-responsive { overflow-x: auto; }
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th, .data-table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #e5e7eb; }
+    .data-table th { background: #f9fafb; font-weight: 600; color: var(--gray); }
+    .data-table tr:hover { background: #f9fafb; }
+    .status-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 500; }
+    .status-active { background: #d1fae5; color: #064e3b; }
+    .status-banned { background: #fee2e2; color: #991b1b; }
+    .btn-icon { padding: 0.25rem 0.5rem; border: none; border-radius: 6px; cursor: pointer; margin: 0 0.125rem; }
+    .btn-edit { background: var(--warning); color: white; }
+    .btn-ban { background: var(--danger); color: white; }
+    .btn-admin { background: var(--primary); color: white; }
+    .btn-recharge { background: var(--success); color: white; }
+    .btn-primary { background: var(--primary); color: white; border: none; padding: 0.625rem 1.25rem; border-radius: 8px; cursor: pointer; }
+    .charts-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+    .chart-container { background: white; border-radius: 16px; padding: 1rem; }
+    canvas { max-height: 300px; }
+    .text-center { text-align: center; }
+    .search-box { margin-bottom: 1rem; }
+    .search-box input { width: 100%; max-width: 300px; padding: 0.5rem 1rem; border: 1px solid #e5e7eb; border-radius: 8px; }
+    .price-input { width: 100px; padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 6px; }
+    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+    .modal.active { display: flex; }
+    .modal-content { background: white; border-radius: 16px; padding: 1.5rem; width: 90%; max-width: 500px; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .close-modal { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+    @media (max-width: 768px) { .sidebar { transform: translateX(-100%); } .sidebar.open { transform: translateX(0); } .main-content { margin-left: 0; } .charts-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="admin-container">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header"><i class="fas fa-crown"></i><h2>ViOTP Admin</h2></div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" data-tab="dashboard"><i class="fas fa-tachometer-alt"></i> Tổng quan</div>
+      <div class="nav-item" data-tab="users"><i class="fas fa-users"></i> Thành viên</div>
+      <div class="nav-item" data-tab="transactions"><i class="fas fa-history"></i> Lịch sử thuê</div>
+      <div class="nav-item" data-tab="services"><i class="fas fa-tags"></i> Giá dịch vụ</div>
+      <div class="nav-item" data-tab="recharges"><i class="fas fa-dollar-sign"></i> Nạp tiền</div>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <div class="admin-header">
+      <div class="admin-title"><h1>Trang quản trị</h1><p>Quản lý hệ thống ViOTP</p></div>
+      <div class="admin-actions"><span id="adminEmail"></span><button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Đăng xuất</button></div>
+    </div>
+
+    <div id="dashboard-tab" class="tab-content active">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-info"><h3 id="totalUsers">0</h3><p>Tổng thành viên</p></div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-phone-alt"></i></div><div class="stat-info"><h3 id="totalRents">0</h3><p>Tổng số thuê</p></div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-coins"></i></div><div class="stat-info"><h3 id="totalRevenue">0</h3><p>Doanh thu</p></div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-dollar-sign"></i></div><div class="stat-info"><h3 id="totalRecharges">0</h3><p>Tổng nạp</p></div></div>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-container"><h4>Doanh thu theo ngày</h4><canvas id="revenueChart"></canvas></div>
+        <div class="chart-container"><h4>Top dịch vụ được thuê nhiều nhất</h4><canvas id="serviceChart"></canvas></div>
+      </div>
+      <div class="card"><div class="card-header"><h3>Thành viên mới đăng ký</h3></div><div class="table-responsive"><table class="data-table" id="recentUsersTable"><thead><tr><th>Email</th><th>Họ tên</th><th>Token</th><th>Ngày đăng ký</th><th>Trạng thái</th></tr></thead><tbody><tr><td colspan="5" class="text-center">Đang tải...</td></tr></tbody></table></div></div>
+    </div>
+
+    <div id="users-tab" class="tab-content">
+      <div class="card"><div class="card-header"><h3><i class="fas fa-users"></i> Danh sách thành viên</h3></div><div class="search-box"><input type="text" id="searchUser" placeholder="🔍 Tìm kiếm theo email..." onkeyup="filterUsers()"></div><div class="table-responsive"><table class="data-table" id="usersTable"><thead><tr><th>STT</th><th>Email</th><th>Họ tên</th><th>Token</th><th>Số dư</th><th>Ngày đăng ký</th><th>Vai trò</th><th>Thao tác</th></tr></thead><tbody><tr><td colspan="8" class="text-center">Đang tải...</td></tr></tbody></table></div></div>
+    </div>
+
+    <div id="transactions-tab" class="tab-content">
+      <div class="card"><div class="card-header"><h3><i class="fas fa-history"></i> Lịch sử thuê số</h3></div><div class="table-responsive"><table class="data-table" id="transactionsTable"><thead><tr><th>Thời gian</th><th>Email</th><th>Dịch vụ</th><th>Số điện thoại</th><th>Giá</th><th>OTP</th><th>Trạng thái</th></tr></thead><tbody><tr><td colspan="7" class="text-center">Đang tải...</td></tr></tbody></table></div></div>
+    </div>
+
+    <div id="services-tab" class="tab-content">
+      <div class="card"><div class="card-header"><h3><i class="fas fa-tags"></i> Quản lý giá dịch vụ</h3><button class="btn-primary" onclick="addService()">+ Thêm dịch vụ</button></div><div class="table-responsive"><table class="data-table" id="servicesTable"><thead><tr><th>ID</th><th>Tên dịch vụ</th><th>Giá hiện tại (VNĐ)</th><th>Giá mới</th><th>Thao tác</th></tr></thead><tbody><tr><td colspan="5" class="text-center">Đang tải...</td></tr></tbody></table></div></div>
+    </div>
+
+    <div id="recharges-tab" class="tab-content">
+      <div class="card"><div class="card-header"><h3><i class="fas fa-dollar-sign"></i> Quản lý nạp tiền</h3></div><div class="table-responsive"><table class="data-table" id="rechargesTable"><thead><tr><th>Thời gian</th><th>Email</th><th>Token/CK</th><th>Số tiền</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody><tr><td colspan="6" class="text-center">Đang tải...</td></tr></tbody></table></div></div>
+    </div>
+  </main>
+</div>
+
+<div id="modal" class="modal"><div class="modal-content"><div class="modal-header"><h3 id="modalTitle">Tiêu đề</h3><button class="close-modal" onclick="closeModal()">&times;</button></div><div id="modalBody"></div></div></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  const ADMIN_EMAIL = "tuquangnamht2007@gmail.com";
+  let revenueChart = null, serviceChart = null;
+
+  auth.onAuthStateChanged(async (user) => {
+    if (!user) { window.location.href = 'login.html'; return; }
+    if (user.email !== ADMIN_EMAIL) { alert('Bạn không có quyền truy cập!'); await auth.signOut(); window.location.href = 'login.html'; return; }
+    document.getElementById('adminEmail').innerText = user.email;
+    await loadAllData();
+  });
+
+  async function loadAllData() {
+    await Promise.all([loadStats(), loadUsers(), loadTransactions(), loadServicesFromDB(), loadRecharges(), loadCharts()]);
+  }
+
+  async function loadStats() {
+    try {
+      const usersSnap = await db.collection('users').get();
+      const rentsSnap = await db.collection('rentHistory').get();
+      const rechargesSnap = await db.collection('recharges').get();
+      let totalRevenue = 0, totalRecharges = 0;
+      rentsSnap.forEach(doc => { totalRevenue += doc.data().price || 0; });
+      rechargesSnap.forEach(doc => { if (doc.data().status === 'Đã ghi nhận') totalRecharges += doc.data().amount || 0; });
+      document.getElementById('totalUsers').innerText = usersSnap.size;
+      document.getElementById('totalRents').innerText = rentsSnap.size;
+      document.getElementById('totalRevenue').innerText = totalRevenue.toLocaleString('vi-VN') + 'đ';
+      document.getElementById('totalRecharges').innerText = totalRecharges.toLocaleString('vi-VN') + 'đ';
+      
+      const recentUsers = [];
+      usersSnap.forEach(doc => { recentUsers.push({ id: doc.id, ...doc.data() }); });
+      recentUsers.sort((a,b) => (b.createdAt?.toDate?.() || 0) - (a.createdAt?.toDate?.() || 0));
+      const tbody = document.querySelector('#recentUsersTable tbody');
+      if (tbody) {
+        tbody.innerHTML = recentUsers.slice(0, 5).map(user => `<tr><td>${user.email || '-'}</td><td>${user.fullName || '-'}</td><td><code>${user.apiToken || '-'}</code></td><td>${formatDate(user.createdAt)}</td><td><span class="status-badge ${user.banned ? 'status-banned' : 'status-active'}">${user.banned ? 'Đã khóa' : 'Hoạt động'}</span></td></tr>`).join('');
+      }
+    } catch (error) { console.error('Load stats error:', error); }
+  }
+
+  async function loadUsers() {
+    try {
+      const snapshot = await db.collection('users').get();
+      const users = []; snapshot.forEach(doc => { users.push({ id: doc.id, ...doc.data() }); });
+      const tbody = document.querySelector('#usersTable tbody');
+      if (tbody) {
+        tbody.innerHTML = users.map((user, index) => `<tr data-email="${user.email}"><td>${index + 1}</td><td>${user.email || '-'}</td><td>${user.fullName || '-'}</td><td><code style="font-size:11px;">${user.apiToken || '-'}</code></td><td>${(user.balance || 0).toLocaleString('vi-VN')}đ</td><td>${formatDate(user.createdAt)}</td><td><span class="status-badge ${user.role === 'admin' ? 'status-active' : ''}">${user.role === 'admin' ? 'Admin' : 'Thành viên'}</span></td><td><button class="btn-icon btn-recharge" onclick="rechargeUser('${user.id}', '${user.email}')" title="Nạp tiền"><i class="fas fa-dollar-sign"></i></button><button class="btn-icon btn-edit" onclick="makeAdmin('${user.id}', '${user.email}')" title="Nâng cấp Admin"><i class="fas fa-crown"></i></button><button class="btn-icon btn-ban" onclick="toggleBan('${user.id}', ${user.banned || false})" title="${user.banned ? 'Mở khóa' : 'Khóa'}"><i class="fas ${user.banned ? 'fa-unlock-alt' : 'fa-ban'}"></i></button></td></tr>`).join('');
+      }
+    } catch (error) { console.error('Load users error:', error); }
+  }
+
+  function filterUsers() {
+    const search = document.getElementById('searchUser').value.toLowerCase();
+    document.querySelectorAll('#usersTable tbody tr').forEach(row => {
+      const email = row.getAttribute('data-email') || '';
+      row.style.display = email.toLowerCase().includes(search) ? '' : 'none';
+    });
+  }
+
+  async function loadTransactions() {
+    try {
+      const snapshot = await db.collection('rentHistory').orderBy('createdAt', 'desc').limit(100).get();
+      const transactions = []; snapshot.forEach(doc => { transactions.push(doc.data()); });
+      const tbody = document.querySelector('#transactionsTable tbody');
+      if (tbody) {
+        tbody.innerHTML = transactions.map(tx => `<tr><td>${formatDate(tx.createdAt)}</td><td>${tx.email || '-'}</td><td>${tx.serviceName || tx.serviceId || '-'}</td><td>${tx.phoneNumber || '-'}</td><td>${(tx.price || 0).toLocaleString('vi-VN')}đ</td><td>${tx.otpCode || '-'}</td><td><span class="status-badge ${tx.status === 'Thành công' ? 'status-active' : ''}">${tx.status || 'Đang xử lý'}</span></td></tr>`).join('');
+      }
+    } catch (error) { console.error('Load transactions error:', error); }
+  }
+
+  async function loadServicesFromDB() {
+    try {
+      const snapshot = await db.collection('services').get();
+      const services = [];
+      if (!snapshot.empty) {
+        snapshot.forEach(doc => { services.push({ id: doc.id, name: doc.data().name || doc.id, price: doc.data().price }); });
+      } else {
+        const defaultServices = [{ id: '19', name: 'Telegram', price: 5000 }, { id: '4', name: 'Shopee', price: 2100 }, { id: '3', name: 'Gmail', price: 2000 }, { id: '7', name: 'Facebook', price: 1600 }, { id: '20', name: 'Grab', price: 1600 }];
+        for (const s of defaultServices) { await db.collection('services').doc(s.id).set({ name: s.name, price: s.price }); services.push(s); }
+      }
+      const tbody = document.querySelector('#servicesTable tbody');
+      if (tbody) {
+        tbody.innerHTML = services.map(service => `<tr><td>${service.id}</td><td>${service.name}</td><td><strong>${service.price.toLocaleString('vi-VN')}đ</strong></td><td><input type="number" id="price_${service.id}" class="price-input" value="${service.price}" step="100" min="100"></td><td><button class="btn-icon btn-edit" onclick="updateServicePrice('${service.id}')">Cập nhật</button></td></tr>`).join('');
+      }
+    } catch (error) { console.error('Load services error:', error); }
+  }
+
+  async function updateServicePrice(serviceId) {
+    const newPrice = parseInt(document.getElementById(`price_${serviceId}`).value);
+    if (isNaN(newPrice) || newPrice < 100) { alert('Giá không hợp lệ'); return; }
+    await db.collection('services').doc(serviceId).set({ price: newPrice, updatedAt: new Date() }, { merge: true });
+    alert('Đã cập nhật giá!');
+    loadServicesFromDB();
+  }
+
+  async function addService() {
+    const id = prompt('Nhập ID dịch vụ (số)');
+    const name = prompt('Nhập tên dịch vụ');
+    const price = parseInt(prompt('Nhập giá dịch vụ (VNĐ)'));
+    if (!id || !name || isNaN(price)) { alert('Thông tin không hợp lệ'); return; }
+    await db.collection('services').doc(id).set({ name, price, createdAt: new Date() });
+    alert('Đã thêm dịch vụ mới');
+    loadServicesFromDB();
+  }
+
+  async function loadRecharges() {
+    try {
+      const snapshot = await db.collection('recharges').orderBy('createdAt', 'desc').limit(100).get();
+      const recharges = []; snapshot.forEach(doc => { recharges.push({ id: doc.id, ...doc.data() }); });
+      const tbody = document.querySelector('#rechargesTable tbody');
+      if (tbody) {
+        tbody.innerHTML = recharges.map(rc => `<tr><td>${formatDate(rc.createdAt)}</td><td>${rc.email || '-'}</td><td><code>${rc.transferCode || '-'}</code></td><td>${(rc.amount || 0).toLocaleString('vi-VN')}đ</td><td><span class="status-badge ${rc.status === 'Đã ghi nhận' ? 'status-active' : ''}">${rc.status || 'Chờ xử lý'}</span></td><td>${rc.status !== 'Đã ghi nhận' ? `<button class="btn-icon btn-recharge" onclick="confirmRecharge('${rc.id}')" title="Xác nhận"><i class="fas fa-check"></i></button>` : '-'}</td></tr>`).join('');
+      }
+    } catch (error) { console.error('Load recharges error:', error); }
+  }
+
+  async function confirmRecharge(rechargeId) {
+    if (!confirm('Xác nhận đã nhận tiền và cộng vào tài khoản?')) return;
+    const rechargeDoc = await db.collection('recharges').doc(rechargeId).get();
+    const recharge = rechargeDoc.data();
+    if (!recharge) return;
+    const userSnapshot = await db.collection('users').where('email', '==', recharge.email).get();
+    if (!userSnapshot.empty) {
+      const userDoc = userSnapshot.docs[0];
+      const currentBalance = userDoc.data().balance || 0;
+      await userDoc.ref.update({ balance: currentBalance + recharge.amount });
+    }
+    await db.collection('recharges').doc(rechargeId).update({ status: 'Đã ghi nhận', confirmedAt: new Date() });
+    alert('Đã xác nhận nạp tiền!');
+    await loadAllData();
+  }
+
+  async function rechargeUser(userId, email) {
+    const amount = parseInt(prompt(`Nhập số tiền cần nạp cho ${email}:`));
+    if (isNaN(amount) || amount <= 0) return;
+    const userDoc = await db.collection('users').doc(userId).get();
+    const currentBalance = userDoc.data()?.balance || 0;
+    await db.collection('users').doc(userId).update({ balance: currentBalance + amount });
+    await db.collection('recharges').add({ uid: userId, email, amount, method: 'admin', status: 'Đã ghi nhận', createdAt: new Date() });
+    alert(`Đã nạp ${amount.toLocaleString('vi-VN')}đ vào tài khoản ${email}`);
+    loadUsers(); loadStats();
+  }
+
+  async function makeAdmin(userId, email) {
+    if (!confirm(`Nâng cấp ${email} lên Admin?`)) return;
+    await db.collection('users').doc(userId).update({ role: 'admin' });
+    alert('Đã nâng cấp thành công!');
+    loadUsers();
+  }
+
+  async function toggleBan(userId, isBanned) {
+    const action = isBanned ? 'mở khóa' : 'khóa';
+    if (!confirm(`Xác nhận ${action} tài khoản này?`)) return;
+    await db.collection('users').doc(userId).update({ banned: !isBanned });
+    alert(`Đã ${action} tài khoản!`);
+    loadUsers();
+  }
+
+  async function loadCharts() {
+    const rents = await db.collection('rentHistory').get();
+    const revenueByDay = {}, serviceCount = {};
+    rents.forEach(doc => {
+      const data = doc.data();
+      if (data.createdAt) { const date = formatDateYMD(data.createdAt); revenueByDay[date] = (revenueByDay[date] || 0) + (data.price || 0); }
+      const serviceName = data.serviceName || `DV ${data.serviceId}`;
+      serviceCount[serviceName] = (serviceCount[serviceName] || 0) + 1;
+    });
+    const sortedDates = Object.keys(revenueByDay).sort().slice(-7);
+    const revenues = sortedDates.map(d => revenueByDay[d]);
+    if (revenueChart) revenueChart.destroy();
+    if (serviceChart) serviceChart.destroy();
+    const ctx1 = document.getElementById('revenueChart').getContext('2d');
+    revenueChart = new Chart(ctx1, { type: 'line', data: { labels: sortedDates, datasets: [{ label: 'Doanh thu (VNĐ)', data: revenues, borderColor: '#2563eb', fill: false }] } });
+    const topServices = Object.entries(serviceCount).sort((a,b) => b[1]-a[1]).slice(0,5);
+    const ctx2 = document.getElementById('serviceChart').getContext('2d');
+    serviceChart = new Chart(ctx2, { type: 'bar', data: { labels: topServices.map(s => s[0]), datasets: [{ label: 'Số lần thuê', data: topServices.map(s => s[1]), backgroundColor: '#8b5cf6' }] } });
+  }
+
+  function formatDate(timestamp) {
+    if (!timestamp) return '-';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleString('vi-VN');
+  }
+  function formatDateYMD(timestamp) {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toISOString().split('T')[0];
+  }
+  function closeModal() { document.getElementById('modal').classList.remove('active'); }
+  async function logout() { await auth.signOut(); window.location.href = 'login.html'; }
+
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+      item.classList.add('active');
+      const tab = item.dataset.tab;
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      document.getElementById(`${tab}-tab`).classList.add('active');
+      if (tab === 'users') loadUsers();
+      if (tab === 'transactions') loadTransactions();
+      if (tab === 'services') loadServicesFromDB();
+      if (tab === 'recharges') loadRecharges();
+      if (tab === 'dashboard') loadAllData();
+    });
+  });
+</script>
+</body>
+</html>
